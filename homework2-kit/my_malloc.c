@@ -135,3 +135,44 @@ void ts_free_lock(void* ptr){
     insert_free_block(&lock_free_list, block);
     pthread_mutex_unlock(&lock_mutex);
 }
+
+// ? what is 本地线程库 __thread
+static __thread block_t * nolock_free_list = NULL;
+static pthread_mutex_t sbrk_mutex = PTHREAD_MUTEX_INITIALIZER;
+// ? what is PTHREAD_MUTEX_INITIALIZER
+
+void *ts_malloc_nolock(size_t size){
+    if(size == 0){
+        return NULL;
+    }
+
+
+    block_t * block = best_fit_search(&nolock_free_list, size);
+
+    if(block != NULL){
+        return (void*)(block+1);
+    }
+
+    pthread_mutex_lock(&sbrk_mutex);
+    block = sbrk(META_SIZE + size);
+    pthread_mutex_unlock(&sbrk_mutex);
+
+    // ? what does -1 mean
+    if(block == (void*)-1){
+        return NULL;
+    }
+
+    block->size = size;
+    block->next = NULL;
+
+    return (void*)(block + 1);
+}
+
+void ts_free_lock(void* ptr){
+    if(ptr == NULL){
+        return;
+    }
+
+    block_t * block = (block_t *) ptr - 1;
+    insert_free_block(&nolock_free_list, block);
+}
