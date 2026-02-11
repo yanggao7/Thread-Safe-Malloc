@@ -41,6 +41,50 @@ static void insert_free_block(block_t **head, block_t * block){
         prev->size += META_SIZE + block->size;
         prev->next = block->next;
     }
+}
 
+static block_t *best_fit_search(block_t** head, size_t size){
+    block_t *curr = *head;
+    block_t *prev = NULL;
+    block_t *best = NULL;
+    block_t *best_prev = NULL;
 
+    while(curr != NULL){
+        if(curr->size >= size){
+            if(best == NULL || curr->size < best->size){
+                best = curr;
+                best_prev = prev;
+            }
+
+            if(best->size == size){
+                break;
+            }
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+
+    if(best == NULL){
+        return NULL;
+    }
+
+    if(best_prev != NULL){
+        best_prev->next = best->next;
+    }else{
+        *head = best->next;
+    }
+    best->next = NULL;
+
+    if(best->size >= size + META_SIZE + 1){
+        //This line find the address of the remainded(extra) part of block
+        block_t * remainder = 
+        (block_t *)((char*)best + META_SIZE + size);
+
+        remainder->size = best->size - size - META_SIZE;
+        remainder->next = NULL;
+        best->size = size;
+        insert_free_block(head, remainder);
+    }
+
+    return best;
 }
