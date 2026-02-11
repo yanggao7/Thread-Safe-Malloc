@@ -88,3 +88,50 @@ static block_t *best_fit_search(block_t** head, size_t size){
 
     return best;
 }
+
+//? why static
+static block_t * lock_free_list = NULL;
+static pthread_mutex_t lock_mutex = PTHREAD_MUTEX_INITIALIZER;
+// ? what is PTHREAD_MUTEX_INITIALIZER
+
+void *ts_malloc_lock(size_t size){
+    if(size == 0){
+        return NULL;
+    }
+
+    //? I am not familiar with programming on threads
+    pthread_mutex_lock(&lock_mutex);
+
+    block_t * block = best_fit_search(&lock_free_list, size);
+
+    if(block != NULL){
+        pthread_mutex_unlock(&lock_mutex);
+        return (void*)(block+1);
+    }
+
+    block = sbrk(META_SIZE + size);
+
+    // ? what does -1 mean
+    if(block == (void*)-1){
+        pthread_mutex_unlock(&lock_mutex);
+        return NULL;
+    }
+
+    block->size = size;
+    block->next = NULL;
+
+    pthread_mutex_unlock(&lock_mutex);
+
+    return (void*)(block + 1);
+}
+
+void ts_free_lock(void* ptr){
+    if(ptr == NULL){
+        return;
+    }
+
+    block_t * block = (block_t *) ptr - 1;
+    pthread_mutex_lock(&lock_mutex);
+    insert_free_block(&lock_free_list, block);
+    pthread_mutex_unlock(&lock_mutex);
+}
