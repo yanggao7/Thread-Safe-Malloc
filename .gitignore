@@ -1,3 +1,16 @@
 docs/
 git_ver/
 v1_submission.zip
+
+# macOS 系统文件
+.DS_Store
+
+# 编译产物
+*.o
+*.so
+
+# 测试编译出的可执行文件
+v1/thread_tests/thread_test
+v1/thread_tests/thread_test_malloc_free
+v1/thread_tests/thread_test_malloc_free_change_thread
+v1/thread_tests/thread_test_measurement
